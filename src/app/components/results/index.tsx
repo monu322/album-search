@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useSearchContext } from "../../contexts/searchContext"; // Use the SearchContext to access artist ID
 import { useEffect, useState } from "react";
 import axios from "axios";
@@ -92,7 +93,7 @@ export default function SearchResults() {
   if (isLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
-        <Spinner size="xl" />
+        <Spinner role="status" size="xl" />
       </Box>
     );
   }
@@ -188,7 +189,7 @@ export default function SearchResults() {
           Showing page {currentPage} of {totalPages}
         </Text>
         {currentPage < totalPages && (
-          <Button colorScheme="blue" size="sm" onClick={() => setCurrentPage(currentPage + 1)}>
+          <Button role="button" colorScheme="blue" size="sm" onClick={() => setCurrentPage(currentPage + 1)}>
             {`Next >`}
           </Button>
         )}
