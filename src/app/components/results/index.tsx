@@ -1,13 +1,47 @@
 "use client";
+
 import { useSearchContext } from "../../contexts/searchContext"; // Use the SearchContext to access artist ID
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Box, Text, SimpleGrid, VStack, Input, Image, Card, CardBody, Spinner, Button, HStack } from "@chakra-ui/react";
-import Link from 'next/link'; // Import Link from next/link for navigation
+import {
+  Box,
+  Text,
+  SimpleGrid,
+  VStack,
+  Input,
+  Image,
+  Card,
+  CardBody,
+  Spinner,
+  Button,
+  HStack,
+} from "@chakra-ui/react";
+import Link from "next/link"; // Import Link from next/link for navigation
+
+// Define types for albums and responses
+interface Album {
+  id: string;
+  title: string;
+  label?: string;
+  artist?: string;
+  thumb?: string;
+  main_release?: string;
+  type: string;
+}
+
+interface Pagination {
+  items: number;
+  pages: number;
+}
+
+interface AlbumsApiResponse {
+  releases: Album[];
+  pagination: Pagination;
+}
 
 export default function SearchResults() {
   const { artistId } = useSearchContext(); // Access the artist ID from the context
-  const [albums, setAlbums] = useState<any[]>([]); // Store the albums in state
+  const [albums, setAlbums] = useState<Album[]>([]); // Store the albums in state
   const [artistName, setArtistName] = useState<string>(""); // Store the artist name
   const [isLoading, setIsLoading] = useState<boolean>(false); // Track loading state
   const [error, setError] = useState<string | null>(null); // Store any error message
@@ -27,19 +61,17 @@ export default function SearchResults() {
       setIsLoading(true);
       try {
         // Fetch artist information
-        const artistResponse = await axios.get(
+        const artistResponse = await axios.get<{ name: string }>(
           `https://api.discogs.com/artists/${artistId}?token=${process.env.NEXT_PUBLIC_DISCOGS_API_TOKEN}`
         );
         setArtistName(artistResponse.data.name); // Set the artist name
 
         // Fetch albums of the artist with pagination
-        const albumsResponse = await axios.get(
+        const albumsResponse = await axios.get<AlbumsApiResponse>(
           `https://api.discogs.com/artists/${artistId}/releases?token=${process.env.NEXT_PUBLIC_DISCOGS_API_TOKEN}&per_page=5&page=${currentPage}&sort=year&sort_order=desc`
         );
-        console.log("artist releases:", albumsResponse.data.releases);
-        setAlbums(albumsResponse.data.releases); // Ensure albums is always an array
 
-        // Fetch the total number of pages from the pagination metadata
+        setAlbums(albumsResponse.data.releases || []); // Ensure albums is always an array
         setTotalPages(Math.ceil(albumsResponse.data.pagination.items / 5)); // Assuming 5 items per page
       } catch (err) {
         setError("Failed to load artist or albums");
@@ -103,40 +135,38 @@ export default function SearchResults() {
 
   return (
     <VStack spacing={4} mt={4}>
-      {/* Display the title with the artist's name */}
       <Text fontSize="2xl" fontWeight="bold" mb={4} px={4}>
         Showing top 5 releases for {artistName}
       </Text>
 
-      {/* Responsive SimpleGrid */}
-      <SimpleGrid 
-        columns={{ base: 1, sm: 2, md: 3, lg: 4, xl: 5 }} 
-        spacing={4} 
-        width="100%" 
+      <SimpleGrid
+        columns={{ base: 1, sm: 2, md: 3, lg: 4, xl: 5 }}
+        spacing={4}
+        width="100%"
         px={{ base: 4, sm: 6, md: 8, lg: 20 }}
       >
         {albums.map((album) => (
           <Link
             key={album.id}
-            href={`/release/${album.type === "release" ? album.id : album.main_release}`} // Use Link to navigate to the correct release page
+            href={`/release/${album.type === "release" ? album.id : album.main_release}`}
             passHref
           >
             <Card
               borderWidth="1px"
-              borderColor="gray.300" // Lighter border color
+              borderColor="gray.300"
               borderRadius="lg"
               overflow="hidden"
-              boxShadow="sm" // Subtle box shadow
+              boxShadow="sm"
               bg="white"
-              p={0} // Remove padding to make the image span the entire width
-              cursor="pointer" // Indicate the card is clickable
+              p={0}
+              cursor="pointer"
             >
               <Image
-                src={album.thumb || placeholderImage} // Use the album cover or the placeholder
+                src={album.thumb || placeholderImage}
                 alt={`${album.title} cover`}
-                width="100%" // Ensure the image spans the full width of the card
-                objectFit="cover" // Ensures the image covers the box entirely without distortion
-                height="200px" // Adjust the height as needed
+                width="100%"
+                objectFit="cover"
+                height="200px"
               />
               <CardBody p={4}>
                 <Text fontWeight="bold">{album.title}</Text>
@@ -148,40 +178,38 @@ export default function SearchResults() {
         ))}
       </SimpleGrid>
 
-      {/* Pagination controls */}
       <HStack spacing={4} mt={6} justify="center">
-        {/* Show Previous button if not on the first page */}
         {currentPage > 1 && (
-          <Button colorScheme="blue" size="sm" onClick={() => setCurrentPage(currentPage - 1)}>{`< Prev`}</Button>
+          <Button colorScheme="blue" size="sm" onClick={() => setCurrentPage(currentPage - 1)}>
+            {`< Prev`}
+          </Button>
         )}
-
-        {/* Display current page and total pages */}
         <Text fontSize="lg">
           Showing page {currentPage} of {totalPages}
         </Text>
-
-        {/* Show Next button if not on the last page */}
         {currentPage < totalPages && (
-          <Button colorScheme="blue" size="sm" onClick={() => setCurrentPage(currentPage + 1)}>{`Next >`}</Button>
+          <Button colorScheme="blue" size="sm" onClick={() => setCurrentPage(currentPage + 1)}>
+            {`Next >`}
+          </Button>
         )}
       </HStack>
 
-      {/* Go to specific page */}
       <Box mt={4} display="flex" justifyContent="center" alignItems="center">
         <Text>Go to page</Text>
         <Input
           type="number"
           value={inputPage}
           onChange={(e) => setInputPage(e.target.value)}
-          onKeyPress={handleKeyPress} // Listen for the Enter key press
+          onKeyPress={handleKeyPress}
           width="80px"
           ml={2}
           mr={2}
         />
-        <Button colorScheme="blue" size="sm" onClick={handlePageJump}>Go</Button>
+        <Button colorScheme="blue" size="sm" onClick={handlePageJump}>
+          Go
+        </Button>
       </Box>
 
-      {/* Error message for invalid page input */}
       {pageError && (
         <Box mt={2} display="flex" justifyContent="center" alignItems="center">
           <Text color="red.500">{pageError}</Text>

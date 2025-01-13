@@ -1,11 +1,11 @@
 "use client";
+
 import { FormEvent, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import {
   Box,
   Input,
-  Button,
   Flex,
   Text,
   VStack,
@@ -14,13 +14,30 @@ import {
   ListItem,
   Spinner,
 } from "@chakra-ui/react";
-import { useSearchContext } from "../../contexts/searchContext"; // Import the context
+import { useSearchContext } from "../../contexts/searchContext";
+
+// Define the types for search results and API response
+interface SearchResult {
+  id: string;
+  title: string;
+  artist: string;
+  artistImageUrl: string;
+}
+
+interface DiscogsApiResponse {
+  results: {
+    id: string;
+    title: string;
+    artist: string;
+    cover_image?: string;
+  }[];
+}
 
 export default function SearchBar() {
   const [query, setQuery] = useState<string>("");
   const [debouncedQuery, setDebouncedQuery] = useState<string>("");
-  const [results, setResults] = useState<any[]>([]); // Store search results in local state
-  const [isLoading, setIsLoading] = useState(false);
+  const [results, setResults] = useState<SearchResult[]>([]); // Use explicit type for results
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const { setArtistId } = useSearchContext(); // Get the setArtistId function from the context
   const router = useRouter();
 
@@ -43,18 +60,23 @@ export default function SearchBar() {
     const fetchResults = async () => {
       setIsLoading(true);
       try {
-        const response = await axios.get(
-          `https://api.discogs.com/database/search?q=${encodeURIComponent(debouncedQuery)}&type=artist&token=${process.env.NEXT_PUBLIC_DISCOGS_API_TOKEN}&per_page=10`
+        const response = await axios.get<DiscogsApiResponse>(
+          `https://api.discogs.com/database/search?q=${encodeURIComponent(
+            debouncedQuery
+          )}&type=artist&token=${
+            process.env.NEXT_PUBLIC_DISCOGS_API_TOKEN
+          }&per_page=10`
         );
-        console.log("Discogs API Response:", response.data);
-        
+
         // Process and store the results
-        const searchResults = response.data.results.map((result: any) => ({
-          id: result.id,
-          title: result.title,
-          artist: result.artist,
-          artistImageUrl: result.cover_image || "", // Fallback for the artist image
-        }));
+        const searchResults: SearchResult[] = response.data.results.map(
+          (result) => ({
+            id: result.id,
+            title: result.title,
+            artist: result.artist,
+            artistImageUrl: result.cover_image || "", // Fallback for the artist image
+          })
+        );
 
         setResults(searchResults); // Store results in local state
       } catch (error) {
@@ -68,7 +90,7 @@ export default function SearchBar() {
   }, [debouncedQuery]);
 
   // Handle form submission (optional)
-  const handleSearch = (e: FormEvent) => {
+  const handleSearch = (e: FormEvent): void => {
     e.preventDefault();
     if (query.trim() === "") {
       return;
@@ -81,7 +103,7 @@ export default function SearchBar() {
   };
 
   // Handle click on search suggestion
-  const handleSuggestionClick = (id: string, artistName: string) => {
+  const handleSuggestionClick = (id: string, artistName: string): void => {
     setArtistId(id); // Store the selected artist's ID in context
     setQuery(artistName); // Set the artist's name in the search field
     setResults([]); // Hide the suggestion list
@@ -106,7 +128,14 @@ export default function SearchBar() {
           Powered by Discogs
         </Text>
       </VStack>
-      <form onSubmit={handleSearch} style={{ width: "100%", maxWidth: "600px", position: "relative" }}>
+      <form
+        onSubmit={handleSearch}
+        style={{
+          width: "100%",
+          maxWidth: "600px",
+          position: "relative",
+        }}
+      >
         <Flex>
           <Input
             type="text"
@@ -129,16 +158,16 @@ export default function SearchBar() {
             width="100%"
             maxWidth="600px"
             mt={2}
-            border="1px solid #e2e8f0" // Border around the suggestions list
-            borderRadius="md" // Rounded corners
-            boxShadow="sm" // Light shadow around the list
+            border="1px solid #e2e8f0"
+            borderRadius="md"
+            boxShadow="sm"
             bg="white"
             position="absolute"
             zIndex="10"
-            top="100%" // Position below the search input
+            top="100%"
             left="0"
-            maxHeight="400px" // Set max height of the suggestions box
-            overflowY="auto" // Enable vertical scrolling when content exceeds max height
+            maxHeight="400px"
+            overflowY="auto"
           >
             {results.map((result) => (
               <ListItem
@@ -146,14 +175,14 @@ export default function SearchBar() {
                 display="flex"
                 alignItems="center"
                 p={3}
-                borderBottom="1px solid #e2e8f0" // Light border for each suggestion
+                borderBottom="1px solid #e2e8f0"
                 cursor="pointer"
                 _hover={{ bg: "gray.100" }}
-                borderRadius="md" // Rounded corners for the suggestion items
-                onClick={() => handleSuggestionClick(result.id, result.artist)} // Set artist ID on click and update the query with artist name
+                borderRadius="md"
+                onClick={() => handleSuggestionClick(result.id, result.artist)}
               >
                 <Image
-                  src={result.artistImageUrl || "/path/to/placeholder-image.jpg"} // Fallback to placeholder if no image
+                  src={result.artistImageUrl || "/path/to/placeholder-image.jpg"}
                   alt={`${result.artist} image`}
                   boxSize="50px"
                   objectFit="cover"
@@ -171,7 +200,7 @@ export default function SearchBar() {
       </form>
 
       {/* Display loading spinner */}
-      {isLoading && <Spinner size="lg" mt={4} />} {/* Show a loading spinner when fetching results */}
+      {isLoading && <Spinner size="lg" mt={4} />}
 
       {/* Display no results message */}
       {!isLoading && debouncedQuery && results.length === 0 && (
